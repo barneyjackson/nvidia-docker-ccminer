@@ -6,9 +6,8 @@ FROM nvidia/cuda:10.1-devel-centos7
 RUN yum -y -q install git
 
 # The packages mentioned in the INSTALL phase, except:
-# jansson-devel - We're going to build our own since the version 2.4.x doesn't have json_array_foreach
 # make - Added it because Centos doesn't have it even after getting autoconf/automake
-RUN yum -y -q install gcc gcc-c++ make wget autoconf automake install openssl-devel libcurl-devel zlib-devel
+RUN yum -y -q install gcc gcc-c++ make wget autoconf automake install openssl-devel libcurl-devel zlib-devel jansson
 
 # Create a user to do the build
 ENV BUILD_FOLDER=/minerbuild
@@ -20,34 +19,6 @@ RUN adduser $APP_USER && \
     mkdir $BUILD_FOLDER && \
     chown $APP_USER.users $BUILD_FOLDER
 
-# We'll build jansson as regular user
-USER $APP_USER
-
-# Download jansson and verify signature (since we're downloading over HTTP)
-
-RUN cd $BUILD_FOLDER && \
-    wget http://www.digip.org/jansson/releases/jansson-2.10.tar.gz && \
-    gpg --keyserver pgp.mit.edu --recv-keys D058434C && \
-    wget http://www.digip.org/jansson/releases/jansson-2.10.tar.gz.asc && \
-    gpg --verify jansson-2.10.tar.gz.asc jansson-2.10.tar.gz
-
-# Extract jasson
-RUN cd $BUILD_FOLDER && \
-    tar -xvf jansson-2.10.tar.gz && \
-    rm jansson-2.10.tar.gz && \
-    rm jansson-2.10.tar.gz.asc
-
-# Build Jansson
-RUN cd $BUILD_FOLDER/jansson-2.10 && \
-    ./configure && \
-    make && \
-    make check
-
-# Install Jansson (need root for this)
-USER root
-RUN cd $BUILD_FOLDER/jansson-2.10 && \
-    make install
- 
 # Now switch to the builder and check out the git repo
 USER $APP_USER
 
@@ -61,27 +32,14 @@ ENV CCMINER_FOLDER=$BUILD_FOLDER/ccminer
 
 ENV CCMINER_FOLDER=$BUILD_FOLDER/ccminer
 
-# Replace uncomment all the old architectures
-RUN cd $CCMINER_FOLDER && \
-    sed \
-     -e 's/#nvcc_ARCH += -gencode=arch=compute_61/nvcc_ARCH += -gencode=arch=compute_61/' \
-     -e 's/#nvcc_ARCH += -gencode=arch=compute_35/nvcc_ARCH += -gencode=arch=compute_35/' \
-     -e 's/#nvcc_ARCH += -gencode=arch=compute_30/nvcc_ARCH += -gencode=arch=compute_30/' \
-     Makefile.am > Makefile2.am
-RUN cd $CCMINER_FOLDER && \
-    cp Makefile2.am Makefile.am && \
-    rm Makefile2.am
+# Copy Makefile with correct CUDA config
+COPY /src/Makefile.am $CCMINER_FOLDER/Makefile.am
 
 # RUN cd $CCMINER_FOLDER && \
 #    cat Makefile.am
 
 # Run the build
-RUN cd $CCMINER_FOLDER && \
-    ./build.sh
-
-# Run the build
-RUN cd $CCMINER_FOLDER && \
-    ./build.sh
+RUN cd $CCMINER_FOLDER && ./build.sh
 
 # Copy the ccminer binary to a /app folder
 USER root
@@ -114,8 +72,16 @@ RUN echo /usr/local/lib > /etc/ld.so.conf.d/userlocal.conf && \
 RUN ln -s $APP_FOLDER/ccminer /usr/local/bin/ccminer && \
     chown -R root.root $APP_FOLDER
 
+# Symlink the missing Cuda lib?
+RUN cp /usr/local/cuda-10.1/compat/* /usr/lib64/
+
 # Recreate and switch to the app user for this build
 RUN adduser $APP_USER
 USER $APP_USER
 
 CMD [ ccminer ]
+# ccminer -a scrypt -o stratum+tcp://prohashing.com:3333 -u bjmjackson -p "a=scrypt,n=trial1,o=cloud"
+# ccminer -a scrypt -o stratum+tcp://ltc.pool.minergate.com:3336 -u virtualcoin.videos@gmail.com -p x
+# ccminer -a lyra2v2 -o stratum+tcp://imaginedpool.doesnotexist.net:1234 -u myuser.w1 -p x
+
+# AWS ECS-optimised LINUX GPU London AMI: ami-08d7e834ed45b7859 (from: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-optimized_AMI.html)
