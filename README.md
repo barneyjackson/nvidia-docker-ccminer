@@ -1,37 +1,27 @@
-# docker-ccminer
+# nvidia-docker-ccminer
 
 ## How to use
 
-Prerequisite: A machine (physical or virtual) that can use CUDA-enabled GPUs; How new of a GPU, or the CUDA compute capability of the card, depends on the algorithm you are mining
+A Dockerized implementation of this [ccminer library](https://github.com/tpruvot/ccminer) running on NVIDIA GPU optimized Ubuntu, ready for deployment using AWS ECS. Built from https://github.com/patrickceg/docker-ccminer to work specifically on latest generation EC2 accelerated compute instances, NVIDIA drivers, and modern Cuda libraries.
+
+**DISCLAIMER: This project is a technical exercise for fun, not a for profit activity. The difficulty of most coins combined with the cost of cloud hosting means mining is not cost effective. You use this entirely at your own risk**
 
 ### Installing stuff to make this run
 
-1. Install the Cuda drivers for your machine (this depends on the Linux distribution, but you can also consult the nVidia downloads page to see which distributions are supported https://developer.nvidia.com/cuda-downloads?target_os=Linux )
-2. Install nvidia-docker https://github.com/NVIDIA/nvidia-docker
+You only need Docker to build the image.
 
-### Usage example
+In developing this I never ran `ccminer` on my local computer as I don't have an NVIDIA graphics card. It may be possible to run locally (assuming you can set up the same `Cuda 11.2+`, `nvidia-container-toolkit`, etc environment), but I can't help you there.
 
-Assuming you are running as root or as a user that is part of the _docker_ group):
+### Notes
 
-`docker run --runtime=nvidia --name gpumining patrickceg/ccminer ccminer -a lyra2v2 -o stratum+tcp://imaginedpool.doesnotexist.net:1234 -u myuser.w1 -p x`
+- Matching the Cuda version with the arch/gencode flags when compiling ccminer is crucial. Have fun researching that...
+- Be sure to assign a GPU to your container, explicitly or using the Docker `--gpus all` flag, otherwise you will get ccminer errors and/or zero hashrates
 
-This example mines with the settings:
+### Donate
 
-* Algorithm lyra2v2
-* Server using stratum+tcp on imaginedpool.doesnotexist.net port 1234
-* Username myuser.w1
-* Password x
+If you do happen to find this useful, feel free to make a donation towards the development costs!
 
-If you feel that your system is stable enough to start mining upon reboot, you can add --restart=always, like this:
-
-`docker run --runtime=nvidia --restart=always --name gpumining patrickceg/ccminer ccminer -a lyra2v2 -o stratum+tcp://imaginedpool.doesnotexist.net:1234 -u myuser.w1 -p x`
-
-## About the Docker image / Github
-
-This is an experiment with ccminer from https://github.com/tpruvot/ccminer
-
-I used this personally to mine for a few months now on a GTX 1080, and recently on a GTX 660 Ti (mainly to heat the room in the winter more than for coins).
-
-The Docker Hub build https://hub.docker.com/r/patrickceg/ccminer/
-
-The repository https://github.com/patrickceg/docker-ccminer
+BTC: bc1q8lr7wtucvw7ca7g8uq8p633lmy7fpx083kgzct
+LTC: LQYpuc1eEhtbHxm7AW6Gfto6v5g412hVvt
+DOGE: DCtDgvyRJ3MycSxut5pR7dq9MbY5q5WFH1
+XMR: 43iRtEd7ZT4J14orRjHZb39NgZ2jDTkYDbeti5FytwHnKaCxTuGVznHFkE8mHMUN2hZrnmM5wXQyjbro6C3NJm8cR93anuQ
